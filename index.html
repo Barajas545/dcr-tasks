@@ -583,7 +583,7 @@ async function geocode(address,city){
   return null;
 }
 
-function ptUpdateCount(){const b=document.getElementById("ptCountBadge");const n=ptRecords.length;if(!n){b.style.display="none";return;}b.style.display="inline-block";b.textContent=n;}
+function ptUpdateCount(){}
 function ptUpdateFilterCounts(){
   const sc=(id,n)=>{const el=document.getElementById(id);if(el)el.textContent=n>0?n:"";};
   sc("ptCntAll",ptRecords.length);
