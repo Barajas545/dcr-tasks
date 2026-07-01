@@ -281,6 +281,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
   min-height:36px;
 }
 .pt-d2-pill:active{transform:scale(.96);}
+.pt-d2-pill-pin{border-color:#555;color:#555;background:#f5f5f3;}
+.pt-d2-pill-pin:active{background:#555;color:#fff;}
 .pt-d2-pill-dir{border-color:#1565c0;color:#1565c0;background:#f0f4ff;}
 .pt-d2-pill-dir:active{background:#1565c0;color:#fff;}
 .pt-d2-pill-complete{border-color:#2e7d32;color:#2e7d32;background:#f0faf0;}
@@ -521,6 +523,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
             </div>
           </div>
           <div class="pt-d2-right">
+            <button class="pt-d2-pill pt-d2-pill-pin" id="ptD2MovePinBtn" style="display:none;" onclick="ptStartPinMove(window._ptD2PinAddr,true)">Move Pin</button>
             <button class="pt-d2-pill pt-d2-pill-dir" onclick="ptGetDirections()">Directions</button>
             <button class="pt-d2-pill pt-d2-pill-complete" id="ptD2CompBtn" onclick="ptMarkCompleteFromD2()">Complete</button>
           </div>
@@ -811,6 +814,8 @@ window.ptOpenDrawer2=function(id){
   const _proj=t.TaskProjectName||"";
   document.getElementById("ptD2BreadAddr").textContent=_addr;
   document.getElementById("ptD2BreadSub").textContent=(_proj&&_proj!==_addr)?_proj:"";
+  window._ptD2PinAddr=_addr;
+  document.getElementById("ptD2MovePinBtn").style.display=ptMarkerMap[_addr]?"":"none";
   if(ptMasterMode){
     ptCurrentAddrFull=_addr+(t.TaskProjectCity?", "+t.TaskProjectCity:"");
   }
@@ -824,7 +829,6 @@ window.ptOpenDrawer2=function(id){
     ${t.TaskWebSiteDetails?`<div class="pt-d2-meta"><span class="pt-d2-meta-icon">🔗</span>${esc(t.TaskWebSiteDetails)}</div>`:""}
     ${em}
     <hr class="pt-d2-divider">
-    ${ptMarkerMap[_addr]?`<button onclick="ptStartPinMove('${_addr.replace(/'/g,"\\'")}',true)" style="width:100%;margin-bottom:14px;padding:11px;background:#f5f5f3;color:#444;border:1.5px dashed #ccc;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">&#x1F4CD; Move Pin on Map</button>`:`<div style="font-size:12px;color:#aaa;text-align:center;margin-bottom:14px;">&#x26A0;&#xFE0F; Pin location not found for this address</div>`}
     <div class="pt-d2-section-head">Notes</div>
     <div id="ptnotelist_${id}">${ptRenderInlineNotes(t)}</div>
     <button class="pt-note-btn" onclick="ptToggleNote('${id}')" style="width:100%;margin-top:10px;">+ Add Note</button>
