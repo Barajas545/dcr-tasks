@@ -629,17 +629,18 @@ window.ptNavClearActive=function(){
 };
 
 let _ptPinMoveAddr=null,_ptPinMoveMarker=null,_ptPinMoveOrigLatLng=null;
-window.ptStartPinMove=function(addr){
+window.ptStartPinMove=function(addr,fromDrawer){
   const mk=ptMarkerMap[addr];
   if(!mk)return;
+  if(fromDrawer)document.getElementById("ptModal2Overlay").classList.remove("open");
   _ptPinMoveAddr=addr;
   _ptPinMoveMarker=mk;
   _ptPinMoveOrigLatLng=mk.getLatLng();
   mk.closePopup();
   mk.dragging.enable();
   mk.setOpacity(0.85);
-  const bar=document.getElementById("ptPinMoveBar");
-  bar.style.display="flex";
+  ptMap.panTo(mk.getLatLng(),{animate:true,duration:0.5});
+  document.getElementById("ptPinMoveBar").style.display="flex";
   ptMap.getContainer().style.cursor="crosshair";
 };
 window.ptConfirmPinMove=function(){
@@ -823,6 +824,7 @@ window.ptOpenDrawer2=function(id){
     ${t.TaskWebSiteDetails?`<div class="pt-d2-meta"><span class="pt-d2-meta-icon">🔗</span>${esc(t.TaskWebSiteDetails)}</div>`:""}
     ${em}
     <hr class="pt-d2-divider">
+    ${ptMarkerMap[_addr]?`<button onclick="ptStartPinMove('${_addr.replace(/'/g,"\\'")}',true)" style="width:100%;margin-bottom:14px;padding:11px;background:#f5f5f3;color:#444;border:1.5px dashed #ccc;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">&#x1F4CD; Move Pin on Map</button>`:`<div style="font-size:12px;color:#aaa;text-align:center;margin-bottom:14px;">&#x26A0;&#xFE0F; Pin location not found for this address</div>`}
     <div class="pt-d2-section-head">Notes</div>
     <div id="ptnotelist_${id}">${ptRenderInlineNotes(t)}</div>
     <button class="pt-note-btn" onclick="ptToggleNote('${id}')" style="width:100%;margin-top:10px;">+ Add Note</button>
@@ -1024,7 +1026,6 @@ async function ptBuildMap(grouped){
           <button onclick="ptChipClick('${sa}')" style="flex:1;padding:10px;background:#1a1a1a;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">View Tasks</button>
           <button onclick="window.open('https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent('${sa}'),'_blank')" style="flex:1;padding:10px;background:#1565c0;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">Directions</button>
         </div>
-        <button onclick="ptStartPinMove('${sa}')" style="width:100%;margin-top:8px;padding:9px;background:#f5f5f3;color:#555;border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;">&#x1F4CD; Move Pin</button>
       </div>`);
       markers.push(mk);ptAllMarkers.push(mk);ptMarkerMap[addr]=mk;
     }
