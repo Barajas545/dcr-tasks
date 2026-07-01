@@ -15,7 +15,7 @@
   --safe-left:env(safe-area-inset-left,0px);
   --safe-right:env(safe-area-inset-right,0px);
   --bar-h:56px;
-  --nav-h:56px;
+  --nav-h:64px;
 }
 html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;-webkit-tap-highlight-color:transparent;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -83,24 +83,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
 .pt-switch-btn{background:none;border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;font-family:inherit;-webkit-tap-highlight-color:transparent;}
 .pt-switch-btn:active{background:rgba(255,255,255,.15);}
 
-/* ═══ BOTTOM NAV (moved to top, below top bar) ═══ */
+/* ═══ NAV BAR (below top bar) ═══ */
 #ptBottomNav{
   position:absolute;top:calc(var(--bar-h) + var(--safe-top));left:0;right:0;z-index:499;
   background:#111;
-  padding:0 8px;
+  padding:8px 12px;
   display:none;
   box-shadow:0 2px 10px rgba(0,0,0,0.4);
 }
-.pt-nav-row{display:flex;justify-content:space-around;align-items:stretch;height:var(--nav-h);}
+.pt-nav-row{display:flex;gap:10px;}
 .pt-nav-btn{
-  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
-  background:none;border:none;color:rgba(255,255,255,.5);font-size:10px;font-weight:600;
+  flex:1;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:8px;
+  background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.12);
+  border-radius:12px;color:rgba(255,255,255,.55);font-size:14px;font-weight:700;
   cursor:pointer;font-family:inherit;-webkit-tap-highlight-color:transparent;
-  transition:color .15s;padding:4px;
+  transition:all .15s;padding:11px 12px;min-height:48px;
 }
-.pt-nav-btn.active{color:#fff;}
-.pt-nav-btn svg{width:22px;height:22px;fill:currentColor;}
-.pt-nav-icon{font-size:20px;line-height:1;}
+.pt-nav-btn:active{transform:scale(.97);}
+.pt-nav-btn.active{background:#fff;border-color:#fff;color:#1a1a1a;}
+.pt-nav-icon{font-size:18px;line-height:1;}
 
 /* ═══ FILTER CHIPS (in top bar) ═══ */
 #ptFilterFloat{
@@ -442,10 +443,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
     <!-- BOTTOM NAV (mobile) -->
     <div id="ptBottomNav">
       <div class="pt-nav-row">
-        <button class="pt-nav-btn active" id="ptNavMap" onclick="ptNavTo('map')">
-          <span class="pt-nav-icon">&#x1F5FA;</span>
-          <span>Map</span>
-        </button>
         <button class="pt-nav-btn" id="ptNavTasks" onclick="ptNavTo('tasks')">
           <span class="pt-nav-icon">&#x1F4CB;</span>
           <span>All Tasks</span>
@@ -595,15 +592,16 @@ function ptUpdateFilterCounts(){
 /* BOTTOM NAV */
 window.ptNavTo=function(tab){
   document.querySelectorAll(".pt-nav-btn").forEach(b=>b.classList.remove("active"));
-  document.getElementById("ptNav"+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.add("active");
-  if(tab==="map"){
-    ptCloseDrawer1();ptCloseSide();
-    if(ptMap&&ptAllMarkers.length>1)ptMap.flyToBounds(L.featureGroup(ptAllMarkers).getBounds().pad(0.3),{animate:true,duration:1,maxZoom:13});
-  } else if(tab==="tasks"){
+  const btn=document.getElementById("ptNav"+tab.charAt(0).toUpperCase()+tab.slice(1));
+  if(btn)btn.classList.add("active");
+  if(tab==="tasks"){
     ptCloseSide();ptOpenMasterDrawer();
   } else if(tab==="projects"){
     ptCloseDrawer1();ptToggleSide();
   }
+};
+window.ptNavClearActive=function(){
+  document.querySelectorAll(".pt-nav-btn").forEach(b=>b.classList.remove("active"));
 };
 
 window.ptSetFilter=function(f){
@@ -735,6 +733,7 @@ window.ptCloseDrawer1=function(){
   ptCurrentAddr="";
   ptMasterMode=false;
   document.getElementById("ptSortBar").style.display="none";document.getElementById("ptD1DirWrap").style.display="block";
+  ptNavClearActive();
 };
 
 let ptCurrentTaskId="";
@@ -886,7 +885,7 @@ document.getElementById("ptModal2Overlay").addEventListener("click",function(e){
 })();
 
 window.ptToggleSide=function(){document.getElementById("ptSidePanel").classList.toggle("open");document.getElementById("ptSideOverlay").classList.toggle("open");};
-window.ptCloseSide=function(){document.getElementById("ptSidePanel").classList.remove("open");document.getElementById("ptSideOverlay").classList.remove("open");};
+window.ptCloseSide=function(){document.getElementById("ptSidePanel").classList.remove("open");document.getElementById("ptSideOverlay").classList.remove("open");ptNavClearActive();};
 
 function ptRefreshChips(){
   const grouped=groupByAddr(ptRecords);
