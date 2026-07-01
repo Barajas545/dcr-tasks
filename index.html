@@ -571,11 +571,11 @@ function ptSerializeNotes(notes){return notes.map(n=>n.date?`[${n.date}] --- ${n
 async function apiFetch(params){const url=API+(params?"?"+params+"&_t="+Date.now():"?_t="+Date.now());const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw new Error("Server "+r.status);return r.json();}
 
 async function geocode(address,city){
+  const base="https://nominatim.openstreetmap.org/search?format=json&limit=1&email=cristobal%40dcrframing.com&q=";
   const q=[address,city].filter(Boolean).join(", ");
-  const url="https://nominatim.openstreetmap.org/search?format=json&limit=1&q="+encodeURIComponent(q);
-  try{const r=await fetch(url,{headers:{"Accept-Language":"en","User-Agent":"ProjectTasksDashboard/1.0"}});const data=await r.json();if(data&&data.length)return{lat:parseFloat(data[0].lat),lng:parseFloat(data[0].lon)};}catch(e){}
+  try{const r=await fetch(base+encodeURIComponent(q));const data=await r.json();if(data&&data.length)return{lat:parseFloat(data[0].lat),lng:parseFloat(data[0].lon)};}catch(e){}
   if(city&&city.trim()){
-    try{const r2=await fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&q="+encodeURIComponent(city.trim()),{headers:{"Accept-Language":"en","User-Agent":"ProjectTasksDashboard/1.0"}});const d2=await r2.json();if(d2&&d2.length)return{lat:parseFloat(d2[0].lat),lng:parseFloat(d2[0].lon)};}catch(e){}
+    try{const r2=await fetch(base+encodeURIComponent(city.trim()));const d2=await r2.json();if(d2&&d2.length)return{lat:parseFloat(d2[0].lat),lng:parseFloat(d2[0].lon)};}catch(e){}
   }
   return null;
 }
@@ -950,6 +950,7 @@ async function ptBuildMap(grouped){
   ptMap=map;
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(map);
   map.setView([36.7,-119.7],6);
+  setTimeout(()=>map.invalidateSize(),200);
   statusEl.style.display="block";
   const markers=[];let done=0;
   for(const [addr,info] of Object.entries(grouped)){
