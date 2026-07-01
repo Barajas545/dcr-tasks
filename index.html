@@ -244,8 +244,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
 .pt-sort-btn{padding:8px 18px;border-radius:24px;font-size:13px;font-weight:600;border:1px solid rgba(0,0,0,0.15);background:#fff;color:#888;cursor:pointer;font-family:inherit;-webkit-tap-highlight-color:transparent;min-height:36px;}
 .pt-sort-btn.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a;}
 .pt-sort-btn:active{transform:scale(.96);}
-.pt-section-head{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#aaa;padding:12px 2px 6px;display:flex;align-items:center;gap:8px;}
-.pt-section-head-line{flex:1;height:1px;background:rgba(0,0,0,0.06);}
+.pt-section-head{font-size:15px;font-weight:700;color:#c62828;padding:14px 2px 6px;display:flex;align-items:center;gap:8px;}
+.pt-section-head-line{flex:1;height:1px;background:rgba(0,0,0,0.08);}
+.pt-section-head-sub{font-size:10px;color:#bbb;font-weight:500;}
 
 /* ═══ DRAWER 2 — TASK DETAIL ═══ */
 #ptDrawer2{
@@ -363,6 +364,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
   cursor:pointer;font-family:inherit;-webkit-tap-highlight-color:transparent;min-height:48px;
 }
 
+/* PIN MOVE BAR */
+#ptPinMoveBar{
+  display:none;position:absolute;bottom:calc(var(--safe-bottom)+16px);
+  left:50%;transform:translateX(-50%);z-index:620;
+  background:#1a1a1a;border-radius:16px;padding:12px 18px;
+  align-items:center;gap:12px;white-space:nowrap;
+  box-shadow:0 4px 20px rgba(0,0,0,0.5);
+}
+#ptPinMoveBar span{color:#fff;font-size:13px;font-weight:600;}
+#ptPinMoveBar button{padding:8px 16px;border-radius:10px;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+#ptPinMoveSave{background:#2e7d32;color:#fff;}
+#ptPinMoveCancel{background:rgba(255,255,255,.12);color:#fff;}
+
 /* TOAST */
 #ptPriorityToast{
   position:absolute;top:calc(var(--bar-h) + var(--nav-h) + var(--safe-top) + 12px);
@@ -466,6 +480,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-s
 
     <div id="ptPriorityToast"></div>
     <div id="ptGeocodeStatus"></div>
+    <div id="ptPinMoveBar">
+      <span>&#x1F4CD; Drag pin to correct location</span>
+      <button id="ptPinMoveSave" onclick="ptConfirmPinMove()">&#x2713; Save</button>
+      <button id="ptPinMoveCancel" onclick="ptCancelPinMove()">Cancel</button>
+    </div>
 
     <!-- MODAL 1: TASK LIST -->
     <div class="pt-modal-overlay-full" id="ptModal1Overlay">
@@ -570,7 +589,12 @@ function ptSerializeNotes(notes){return notes.map(n=>n.date?`[${n.date}] --- ${n
 
 async function apiFetch(params){const url=API+(params?"?"+params+"&_t="+Date.now():"?_t="+Date.now());const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw new Error("Server "+r.status);return r.json();}
 
+function ptGetSavedPin(addr){try{const v=localStorage.getItem("ptPin_"+addr);return v?JSON.parse(v):null;}catch(e){return null;}}
+function ptSavePin(addr,lat,lng){try{localStorage.setItem("ptPin_"+addr,JSON.stringify({lat,lng}));}catch(e){}}
+
 async function geocode(address,city){
+  const saved=ptGetSavedPin(address);
+  if(saved)return saved;
   const base="https://nominatim.openstreetmap.org/search?format=json&limit=1&email=cristobal%40dcrframing.com&q=";
   const q=[address,city].filter(Boolean).join(", ");
   try{const r=await fetch(base+encodeURIComponent(q));const data=await r.json();if(data&&data.length)return{lat:parseFloat(data[0].lat),lng:parseFloat(data[0].lon)};}catch(e){}
@@ -602,6 +626,40 @@ window.ptNavTo=function(tab){
 };
 window.ptNavClearActive=function(){
   document.querySelectorAll(".pt-nav-btn").forEach(b=>b.classList.remove("active"));
+};
+
+let _ptPinMoveAddr=null,_ptPinMoveMarker=null,_ptPinMoveOrigLatLng=null;
+window.ptStartPinMove=function(addr){
+  const mk=ptMarkerMap[addr];
+  if(!mk)return;
+  _ptPinMoveAddr=addr;
+  _ptPinMoveMarker=mk;
+  _ptPinMoveOrigLatLng=mk.getLatLng();
+  mk.closePopup();
+  mk.dragging.enable();
+  mk.setOpacity(0.85);
+  const bar=document.getElementById("ptPinMoveBar");
+  bar.style.display="flex";
+  ptMap.getContainer().style.cursor="crosshair";
+};
+window.ptConfirmPinMove=function(){
+  if(!_ptPinMoveMarker)return;
+  const ll=_ptPinMoveMarker.getLatLng();
+  ptSavePin(_ptPinMoveAddr,ll.lat,ll.lng);
+  _ptPinMoveMarker.dragging.disable();
+  _ptPinMoveMarker.setOpacity(1);
+  document.getElementById("ptPinMoveBar").style.display="none";
+  if(ptMap)ptMap.getContainer().style.cursor="";
+  _ptPinMoveAddr=null;_ptPinMoveMarker=null;_ptPinMoveOrigLatLng=null;
+};
+window.ptCancelPinMove=function(){
+  if(!_ptPinMoveMarker)return;
+  _ptPinMoveMarker.setLatLng(_ptPinMoveOrigLatLng);
+  _ptPinMoveMarker.dragging.disable();
+  _ptPinMoveMarker.setOpacity(1);
+  document.getElementById("ptPinMoveBar").style.display="none";
+  if(ptMap)ptMap.getContainer().style.cursor="";
+  _ptPinMoveAddr=null;_ptPinMoveMarker=null;_ptPinMoveOrigLatLng=null;
 };
 
 window.ptSetFilter=function(f){
@@ -675,7 +733,7 @@ function ptRenderMasterList(){
     const grouped=groupByAddr(tasks);
     scroll.innerHTML=Object.entries(grouped).map(([addr,info])=>{
       const sorted=[...info.tasks].sort((a,b)=>priOrder(a.TaskPrioraty)-priOrder(b.TaskPrioraty));
-      return`<div class="pt-section-head"><span>${esc(addr)}</span>${info.name?`<span style="font-size:10px;color:#bbb;font-weight:500;text-transform:none;">${esc(info.name)}</span>`:""}<span class="pt-section-head-line"></span></div>`
+      return`<div class="pt-section-head"><span>${esc(addr)}</span>${info.name?`<span class="pt-section-head-sub">${esc(info.name)}</span>`:""}<span class="pt-section-head-line"></span></div>`
         +sorted.map(t=>ptMakeTaskCard(t)).join("");
     }).join("");
   } else {
@@ -966,6 +1024,7 @@ async function ptBuildMap(grouped){
           <button onclick="ptChipClick('${sa}')" style="flex:1;padding:10px;background:#1a1a1a;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">View Tasks</button>
           <button onclick="window.open('https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent('${sa}'),'_blank')" style="flex:1;padding:10px;background:#1565c0;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;">Directions</button>
         </div>
+        <button onclick="ptStartPinMove('${sa}')" style="width:100%;margin-top:8px;padding:9px;background:#f5f5f3;color:#555;border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;">&#x1F4CD; Move Pin</button>
       </div>`);
       markers.push(mk);ptAllMarkers.push(mk);ptMarkerMap[addr]=mk;
     }
