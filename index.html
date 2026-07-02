@@ -592,8 +592,15 @@ function ptSerializeNotes(notes){return notes.map(n=>n.date?`[${n.date}] --- ${n
 
 async function apiFetch(params){const url=API+(params?"?"+params+"&_t="+Date.now():"?_t="+Date.now());const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw new Error("Server "+r.status);return r.json();}
 
-function ptGetSavedPin(addr){try{const v=localStorage.getItem("ptPin_"+addr);return v?JSON.parse(v):null;}catch(e){return null;}}
-function ptSavePin(addr,lat,lng){try{localStorage.setItem("ptPin_"+addr,JSON.stringify({lat,lng}));}catch(e){}}
+const _ptPinOverrides={};
+function ptGetSavedPin(addr){
+  if(_ptPinOverrides[addr])return _ptPinOverrides[addr];
+  try{const v=localStorage.getItem("ptPin_"+addr);return v?JSON.parse(v):null;}catch(e){return null;}
+}
+function ptSavePin(addr,lat,lng){
+  _ptPinOverrides[addr]={lat,lng};
+  try{localStorage.setItem("ptPin_"+addr,JSON.stringify({lat,lng}));}catch(e){}
+}
 
 async function geocode(address,city){
   const saved=ptGetSavedPin(address);
@@ -631,7 +638,7 @@ window.ptNavClearActive=function(){
   document.querySelectorAll(".pt-nav-btn").forEach(b=>b.classList.remove("active"));
 };
 
-let _ptPinMoveAddr=null,_ptPinMoveMarker=null,_ptPinMoveOrigLatLng=null;
+let _ptPinMoveAddr=null,_ptPinMoveMarker=null,_ptPinMoveOrigLatLng=null,_ptPinMoveNewLatLng=null;
 window.ptStartPinMove=function(addr,fromDrawer){
   const mk=ptMarkerMap[addr];
   if(!mk)return;
@@ -639,8 +646,10 @@ window.ptStartPinMove=function(addr,fromDrawer){
   _ptPinMoveAddr=addr;
   _ptPinMoveMarker=mk;
   _ptPinMoveOrigLatLng=mk.getLatLng();
+  _ptPinMoveNewLatLng=null;
   mk.closePopup();
   mk.dragging.enable();
+  mk.off("dragend").on("dragend",function(e){_ptPinMoveNewLatLng=e.target.getLatLng();});
   mk.setOpacity(0.85);
   ptMap.panTo(mk.getLatLng(),{animate:true,duration:0.5});
   document.getElementById("ptPinMoveBar").style.display="flex";
@@ -648,22 +657,29 @@ window.ptStartPinMove=function(addr,fromDrawer){
 };
 window.ptConfirmPinMove=function(){
   if(!_ptPinMoveMarker)return;
-  const ll=_ptPinMoveMarker.getLatLng();
+  const ll=_ptPinMoveNewLatLng||_ptPinMoveMarker.getLatLng();
   ptSavePin(_ptPinMoveAddr,ll.lat,ll.lng);
+  _ptPinMoveMarker.setLatLng(ll);
   _ptPinMoveMarker.dragging.disable();
+  _ptPinMoveMarker.off("dragend");
   _ptPinMoveMarker.setOpacity(1);
   document.getElementById("ptPinMoveBar").style.display="none";
   if(ptMap)ptMap.getContainer().style.cursor="";
-  _ptPinMoveAddr=null;_ptPinMoveMarker=null;_ptPinMoveOrigLatLng=null;
+  const toast=document.getElementById("ptPriorityToast");
+  toast.textContent="📍 Pin location saved";toast.style.background="#1a1a1a";
+  toast.style.display="block";clearTimeout(window._ptToastTimer);
+  window._ptToastTimer=setTimeout(()=>{toast.style.display="none";},2000);
+  _ptPinMoveAddr=null;_ptPinMoveMarker=null;_ptPinMoveOrigLatLng=null;_ptPinMoveNewLatLng=null;
 };
 window.ptCancelPinMove=function(){
   if(!_ptPinMoveMarker)return;
   _ptPinMoveMarker.setLatLng(_ptPinMoveOrigLatLng);
   _ptPinMoveMarker.dragging.disable();
+  _ptPinMoveMarker.off("dragend");
   _ptPinMoveMarker.setOpacity(1);
   document.getElementById("ptPinMoveBar").style.display="none";
   if(ptMap)ptMap.getContainer().style.cursor="";
-  _ptPinMoveAddr=null;_ptPinMoveMarker=null;_ptPinMoveOrigLatLng=null;
+  _ptPinMoveAddr=null;_ptPinMoveMarker=null;_ptPinMoveOrigLatLng=null;_ptPinMoveNewLatLng=null;
 };
 
 window.ptSetFilter=function(f){
@@ -1022,7 +1038,7 @@ async function ptBuildMap(grouped){
     const loc=await geocode(addr,info.city);done++;
     if(loc){
       const sa=addr.replace(/\\/g,"\\\\").replace(/'/g,"\\'");
-      const mk=L.marker([loc.lat,loc.lng]).addTo(map);
+      const mk=L.marker([loc.lat,loc.lng],{draggable:false}).addTo(map);
       mk.bindPopup(`<div style="min-width:180px;">
         <strong style="font-size:14px;display:block;margin-bottom:4px;">${addr}</strong>
         ${info.city?`<span style="color:#666;font-size:12px;">${info.city}</span><br>`:""}
